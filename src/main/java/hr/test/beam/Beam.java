@@ -247,11 +247,10 @@ public class Beam implements Constants {
     public SensorReading apply(KafkaRecord<Long, String> input) {
       String[] data = input.getKV().getValue().split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)"); // Data has "," as delimiter
 
-
-      //for(int i =0; i<data.length; i++) {
-    //	System.out.println(i +".: "+data[i]);
-      //}
-      //System.out.println("==============================");
+      // for(int i =0; i<data.length; i++) {
+      // System.out.println(i +".: "+data[i]);
+      // }
+      // System.out.println("==============================");
       // Long data type
       long dataStreamID = data[9].isEmpty() ? -1L : Long.parseLong(data[9]);
       long resourceID = data[10].isEmpty() ? -1L : Long.parseLong(data[10]);
@@ -289,7 +288,7 @@ public class Beam implements Constants {
   public static class TaskAggregation extends PTransform<PCollection<SensorReading>, PCollection<OperationResult>> {
     @Override
     public PCollection<OperationResult> expand(PCollection<SensorReading> inputSensorReadings) {
-	System.out.println("Starting processing");
+      System.out.println("Starting processing");
       PCollection<String> measurementTitles = inputSensorReadings
           .apply("Extract measurement title from sensor data", ParDo.of(new ExtractMeasurementTitleDoFn()));
       PCollection<KV<String, Long>> numberOfMeasurementTitles = measurementTitles
@@ -635,17 +634,17 @@ public class Beam implements Constants {
     cr.registerCoderForClass(Accum.class, Accum.CODER);
 
     List<TopicPartition> topicPartitions = new ArrayList();
-    for(int i =0;i< NUM_OF_KAFKA_PARTITIONS;i++) {
-	topicPartitions.add(new TopicPartition(INPUT_TOPIC_NAME, i));
+    for (int i = 0; i < NUM_OF_KAFKA_PARTITIONS; i++) {
+      topicPartitions.add(new TopicPartition(INPUT_TOPIC_NAME, i));
     }
-    
+
     // 1) Read data from Kafka "input" topic
-	// You can also read like thi .withTopic(INPUT_TOPIC_NAME)
-	// Read over partitions .withTopicPartitions(topicPartitions)
+    // for reading directly from the topic .withTopic(INPUT_TOPIC_NAME)
+    // Read over partitions .withTopicPartitions(topicPartitions)
     PCollection<KafkaRecord<Long, String>> inputData = pipeline
         .apply("Read input data from Kafka topic", KafkaIO.<Long, String>read()
-            .withBootstrapServers(BOOTSTRAP_SERVERS+","+BOOTSTRAP_SERVERS)
-	    .withTopic(INPUT_TOPIC_NAME)
+            .withBootstrapServers(BOOTSTRAP_SERVERS + "," + BOOTSTRAP_SERVERS)
+            .withTopicPartitions(topicPartitions)
             .withKeyDeserializer(LongDeserializer.class)
             .withValueDeserializer(StringDeserializer.class)
             .withMaxNumRecords((long) (LINES * ITERATIONS * PERCENTAGE)));
