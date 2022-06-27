@@ -1,0 +1,289 @@
+hazelcast:
+  # The name of the cluster. All members of a single cluster must have the
+  # same cluster name configured and a client connecting to this cluster
+  # must use it as well.
+  cluster-name: jet
+  network:
+    port:
+      # The preferred port number where the Jet instance will listen. The
+      # convention is to use 5701 and it is the default both here and in
+      # various tools connecting to Jet.
+      port: 5701
+      # Whether to automatically try higher port numbers when the preferred
+      # one is taken.
+      auto-increment: true
+    # Which network interface to listen on. With "enabled" set to false
+    # Jet will listen on all available interfaces.
+    interfaces:
+      enabled: false
+      interfaces:
+        - 127.0.0.1
+  jet:
+    # Specifies whether if the jet is enabled or not in this member
+    enabled: false
+    # Specifies whether uploading resources when submitting the job is enabled or not
+    resource-upload-enabled: false
+    # period between flow control packets in milliseconds
+    flow-control-period: 100
+    # number of backup copies to configure for Hazelcast IMaps used internally in a Jet job
+    backup-count: 1
+    # the delay after which auto-scaled jobs will restart if a new member is added to the
+    # cluster. The default is 10 seconds. Has no effect on jobs with auto scaling disabled
+    scale-up-delay-millis: 10000
+    # Sets whether lossless job restart is enabled for the node. With
+    # lossless restart you can restart the whole cluster without losing the
+    # jobs and their state. The feature is implemented on top of the Persistence
+    # feature of Hazelcast which persists the data to disk.
+    lossless-restart-enabled: false
+    # Sets the maximum number of records that can be accumulated by any single
+    # Processor instance.
+    #
+    # Operations like grouping, sorting or joining require certain amount of
+    # records to be accumulated before they can proceed. You can set this option
+    # to reduce the probability of OutOfMemoryError.
+    #
+    # This option applies to each Processor instance separately, hence the
+    # effective limit of records accumulated by each cluster member is influenced
+    # by the vertex's localParallelism and the number of jobs in the cluster.
+    #
+    # Currently, maxProcessorAccumulatedRecords limits:
+    #    - number of items sorted by the sort operation
+    #    - number of distinct keys accumulated by aggregation operations
+    #    - number of entries in the hash-join lookup tables
+    #    - number of entries in stateful transforms
+    #    - number of distinct items in distinct operation
+    #
+    # Note: the limit does not apply to streaming aggregations.
+    max-processor-accumulated-records: 9223372036854775807
+
+    edge-defaults:
+      # capacity of the concurrent SPSC queue between each two processors
+      queue-size: 10240
+      # network packet size limit in bytes, only applies to distributed edges
+      packet-size-limit: 16384
+      # receive window size multiplier, only applies to distributed edges
+      receive-window-multiplier: 3
+  # Some features of Hazelcast Jet are configured through the system properties.
+  # You can configure the same properties here. This configuration overrides the
+  # system properties. For a full list of recognized properties see
+  # https://docs.hazelcast.org/docs/latest/manual/html-single/#system-properties
+  queue:
+    default:
+      # Maximum size of the queue. When a JVM's local queue size reaches the maximum,
+      # all put/offer operations will get blocked until the queue size
+      # of the JVM goes down below the maximum.
+      # Any integer between 0 and Integer.MAX_VALUE. 0 means
+      # Integer.MAX_VALUE. Default is 0.
+      max-size: 0
+      # Number of backups. If 1 is set as the backup-count for example,
+      # then all entries of the map will be copied to another JVM for
+      # fail-safety. 0 means no backup.
+      backup-count: 1
+      # Number of async backups. 0 means no backup.
+      async-backup-count: 0
+      # Used to purge unused or empty queues. If you define a value (time in
+      # seconds) for this element, then your queue will be destroyed if it
+      # stays empty or unused for that time.
+      empty-queue-ttl: -1
+      # While recovering from split-brain (network partitioning), data structure
+      # entries in the small cluster merge into the bigger cluster based on the
+      # policy set here. When an entry merges into the cluster, an entry with
+      # the same key (or value) might already exist in the cluster. The merge
+      # policy resolves these conflicts with different out-of-the-box or custom
+      # strategies. The out-of-the-box merge polices can be references by their
+      # simple class name. For custom merge policies you have to provide a
+      # fully qualified class name.
+      # The out-of-the-box policies are:
+      #    DiscardMergePolicy: the entry from the smaller cluster will be
+      #      discarded.
+      #    HigherHitsMergePolicy: the entry with the higher number of hits wins.
+      #    LatestAccessMergePolicy: the entry with the latest access wins.
+      #    LatestUpdateMergePolicy: the entry with the latest update wins.
+      #    PassThroughMergePolicy: the entry from the smaller cluster wins.
+      #    PutIfAbsentMergePolicy: the entry from the smaller cluster wins if
+      #      it doesn't exist in the cluster.
+      # The default policy is: PutIfAbsentMergePolicy
+      merge-policy:
+        batch-size: 100
+        class-name: com.hazelcast.spi.merge.PutIfAbsentMergePolicy
+  ringbuffer:
+    default:
+      # The maximum number of items can be stored in the Ringbuffer.
+      capacity: 100000
+      # The number of synchronous backups. For example, if it is set to 1, then
+      # the Ringbuffer items are copied to one other member for fail-safety.
+      # Its default value is 1.
+      backup-count: 1
+      # The number of asynchronous backups. Its default value is 0.
+      async-backup-count: 0
+      # Specifies the time to live in seconds which is the maximum number of
+      # seconds for each item to stay in the ringbuffer before being removed.
+      # Entries that are older than time-to-live-seconds are removed from the
+      # ringbuffer on the next ringbuffer operation (read or write). Time to
+      # live can be disabled by setting time-to-live-seconds to 0. It means
+      # that items won't get removed because they expire. They may only be
+      # overwritten. When time-to-live-seconds is disabled and after the tail
+      # does a full loop in the ring, the ringbuffer size will always be equal
+      # to the capacity. The time-to-live-seconds can be any integer between 0
+      # and Integer#MAX_VALUE. 0 means infinite. The default is 0.
+      time-to-live-seconds: 0
+      # Sets the in-memory format. Setting the in-memory format controls the
+      # format of the stored item in the ringbuffer.
+      # The supported formats are:
+      #  - OBJECT: the item is stored in deserialized format (a regular object)
+      #  - BINARY (default): the item is stored in serialized format (a binary blob)
+      # The object in-memory format is useful when:
+      #  - the object stored in object format has a smaller footprint than in
+      #  binary format
+      #  - if there are readers using a filter. Since for every filter
+      #  invocation, the object needs to be available in object format.
+      in-memory-format: BINARY
+      # While recovering from split-brain (network partitioning), data structure
+      # entries in the small cluster merge into the bigger cluster based on the
+      # policy set here. When an entry merges into the cluster, an entry with
+      # the same key (or value) might already exist in the cluster. The merge
+      # policy resolves these conflicts with different out-of-the-box or custom
+      # strategies. The out-of-the-box merge polices can be references by their
+      # simple class name. For custom merge policies you have to provide a
+      # fully qualified class name.
+      # The out-of-the-box policies are:
+      #    DiscardMergePolicy: the entry from the smaller cluster will be
+      #      discarded.
+      #    HigherHitsMergePolicy: the entry with the higher number of hits wins.
+      #    LatestAccessMergePolicy: the entry with the latest access wins.
+      #    LatestUpdateMergePolicy: the entry with the latest update wins.
+      #    PassThroughMergePolicy: the entry from the smaller cluster wins.
+      #    PutIfAbsentMergePolicy: the entry from the smaller cluster wins if
+      #      it doesn't exist in the cluster.
+      # The default policy is: PutIfAbsentMergePolicy
+      merge-policy:
+        batch-size: 100
+        class-name: com.hazelcast.spi.merge.PutIfAbsentMergePolicy
+  cp-subsystem:
+    # The number of CP members to initialize CP Subsystem. It is 0 by default,
+    # meaning that CP Subsystem is disabled. CP Subsystem is enabled when a
+    # positive value is set. After CP Subsystem is initialized successfully,
+    # more CP members can be added at run-time and the number of active CP
+    # members can go beyond the configured CP member count. The number of CP
+    # members can be smaller than total member count of the Hazelcast cluster.
+    # For instance, you can run 5 CP members in a Hazelcast cluster of 20
+    # members. If set, must be greater than or equal to group-size.
+    cp-member-count: 0
+    # The number of CP members to form CP groups. If set, it must be an odd
+    # number between 3 and 7. Otherwise, cp-member-count is respected while
+    # forming CP groups. If set, must be smaller than or equal to
+    # cp-member-count.
+    group-size: 0
+    # Duration for a CP session to be kept alive after the last received session
+    # heartbeat. A CP session is closed if no session heartbeat is received
+    # during this duration. Session TTL must be decided wisely. If a very small
+    # value is set, a CP session can be closed prematurely if its owner Hazelcast
+    # instance temporarily loses connectivity to CP Subsystem because of a
+    # network partition or a GC pause. In such an occasion, all CP resources of
+    # this Hazelcast instance, such as FencedLock or ISemaphore, are released.
+    # On the other hand, if a very large value is set, CP resources can remain
+    # assigned to an actually crashed Hazelcast instance for too long and
+    # liveliness problems can occur. CP Subsystem offers an API in
+    # CPSessionManagementService to deal with liveliness issues related to CP
+    # sessions. In order to prevent premature session expires, session TTL
+    # configuration can be set a relatively large value and
+    # CPSessionManagementService#forceCloseSession(String, long) can be manually
+    # called to close CP session of a crashed Hazelcast instance. Must be greater
+    # than session-heartbeat-interval-seconds, and smaller than or equal to
+    # missing-cp-member-auto-removal-seconds.
+    session-time-to-live-seconds: 300
+    # Interval for the periodically-committed CP session heartbeats. A CP
+    # session is started on a CP group with the first session-based request of
+    # a Hazelcast instance. After that moment, heartbeats are periodically
+    # committed to the CP group. Must be smaller than session-time-to-live-seconds.
+    session-heartbeat-interval-seconds: 5
+    # Duration to wait before automatically removing a missing CP member from
+    # CP Subsystem. When a CP member leaves the Hazelcast cluster, it is not
+    # automatically removed from CP Subsystem, since it could be still alive
+    # and left the cluster because of a network problem. On the other hand, if
+    # a missing CP member actually crashed, it creates a danger for CP groups,
+    # because it is still part of majority calculations. This situation could
+    # lead to losing majority of CP groups if multiple CP members leave the
+    # cluster over time. With the default configuration, missing CP members are
+    # automatically removed from CP Subsystem after 4 hours. This feature is
+    # very useful in terms of fault tolerance when CP member count is also
+    # configured to be larger than group size. In this case, a missing CP
+    # member is safely replaced in its CP groups with other available CP
+    # members in CP Subsystem. This configuration also implies that no network
+    # partition is expected to be longer than the configured duration. If a
+    # missing CP member comes back alive after it is removed from CP Subsystem
+    # with this feature, that CP member must be terminated manually. Must be
+    # greater than or equal to session-time-to-live-seconds.
+    missing-cp-member-auto-removal-seconds: 14400
+    # Offers a choice between at-least-once and at-most-once execution of
+    # operations on top of the Raft consensus algorithm. It is disabled by
+    # default and offers at-least-once execution guarantee. If enabled, it
+    # switches to at-most-once execution guarantee. When you invoke an API
+    # method on a CP data structure proxy, it sends an internal operation to
+    # the corresponding CP group. After this operation is committed on the
+    # majority of this CP group by the Raft leader node, it sends a response
+    # for the public API call. If a failure causes loss of the response, then
+    # the calling side cannot determine if the operation is committed on the CP
+    # group or not. In this case, if this configuration is disabled, the
+    # operation is replicated again to the CP group, and hence could be
+    # committed multiple times. If it is enabled, the public API call fails
+    # with com.hazelcast.core.IndeterminateOperationStateException.
+    fail-on-indeterminate-operation-state: false
+    raft-algorithm:
+      # Leader election timeout in milliseconds. If a candidate cannot win
+      # majority of the votes in time, a new leader election round is initiated.
+      leader-election-timeout-in-millis: 2000
+      # Duration in milliseconds for a Raft leader node to send periodic
+      # heartbeat messages to its followers in order to denote its liveliness.
+      # Periodic heartbeat messages are actually append entries requests and
+      # can contain log entries for the lagging followers. If a too small value
+      # is set, heartbeat messages are sent from Raft leaders to followers too
+      # frequently and it can cause an unnecessary usage of CPU and network.
+      leader-heartbeat-period-in-millis: 5000
+      # Maximum number of missed Raft leader heartbeats for a follower to
+      # trigger a new leader election round. For instance, if
+      # leader-heartbeat-period-in-millis is 1 second and this value is set to
+      # 5, then a follower triggers a new leader election round if 5 seconds
+      # pass after the last heartbeat message of the current Raft leader node.
+      # If this duration is too small, new leader election rounds can be
+      # triggered unnecessarily if the current Raft leader temporarily slows
+      # down or a network congestion occurs. If it is too large, it takes
+      # longer to detect failures of Raft leaders.
+      max-missed-leader-heartbeat-count: 5
+      # Maximum number of Raft log entries that can be sent as a batch in a
+      # single append entries request. In Hazelcast's Raft consensus algorithm
+      # implementation, a Raft leader maintains a separate replication pipeline
+      # for each follower. It sends a new batch of Raft log entries to a
+      # follower after the follower acknowledges the last append entries request
+      # sent by the leader.
+      append-request-max-entry-count: 100
+      # Number of new commits to initiate a new snapshot after the last
+      # snapshot taken by the local Raft node. This value must be configured
+      # wisely as it effects performance of the system in multiple ways. If a
+      # small value is set, it means that snapshots are taken too frequently
+      # and Raft nodes keep a very short Raft log. If snapshots are large and
+      # CP Subsystem Persistence is enabled, this can create an unnecessary
+      # overhead on IO performance. Moreover, a Raft leader can send too many
+      # snapshots to followers and this can create an unnecessary overhead on
+      # network. On the other hand, if a very large value is set, it can create
+      # a memory overhead since Raft log entries are going to be kept in memory
+      # until the next snapshot.
+      commit-index-advance-count-to-snapshot: 100000
+      # Maximum number of uncommitted log entries in the leader's Raft log
+      # before temporarily rejecting new requests of callers. Since Raft
+      # leaders send log entries to followers in batches, they accumulate
+      # incoming requests in order to improve the throughput. You can configure
+      # this field by considering your degree of concurrency in your callers.
+      # For instance, if you have at most 1000 threads sending requests to a
+      # Raft leader, you can set this field to 1000 so that callers do not get
+      # retry responses unnecessarily.
+      uncommitted-entry-count-to-reject-new-appends: 100
+      # Timeout duration in milliseconds to apply backoff on append entries
+      # requests. After a Raft leader sends an append entries request to a
+      # follower, it will not send a subsequent append entries request either
+      # until the follower responds or this timeout occurs. Backoff durations
+      # are increased exponentially if followers remain unresponsive.
+      append-request-backoff-timeout-in-millis: 100
+#  properties:
+#    property.name: value
+
